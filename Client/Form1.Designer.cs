@@ -55,7 +55,6 @@ namespace Client
             this.txtIp.Size = new System.Drawing.Size(333, 23);
             this.txtIp.TabIndex = 1;
             this.txtIp.Text = "127.0.0.1:9000";
-            this.txtIp.TextChanged += new System.EventHandler(this.txtIP_TextChanged);
             // 
             // btnSend
             // 
@@ -76,7 +75,6 @@ namespace Client
             this.txtInfo.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.txtInfo.Size = new System.Drawing.Size(333, 155);
             this.txtInfo.TabIndex = 1;
-            this.txtInfo.TextChanged += new System.EventHandler(this.txtInfo_TextChanged);
             // 
             // label2
             // 

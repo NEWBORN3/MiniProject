@@ -16,4 +16,8 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\RSAImplementation\RSAImplementation.csproj" />
+  </ItemGroup>
+
 </Project>

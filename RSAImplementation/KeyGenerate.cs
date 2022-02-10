@@ -1,30 +1,89 @@
+using System;
 using System.Numerics;
-
 namespace RSAImplementation
 {
-    public class Maths
+    public class KeyGenerate
     {
-         public static Random rand = new Random(Environment.TickCount);
-
-        /// <summary>
-        /// A Rabin Miller primality test which returns true or false.
-        /// </summary>
-        /// <param name="num">The number to check for being likely prime.</param>
-        /// <returns></returns>
-        public static bool RabinMillerTest(BigInteger source, int certainty)
+        const int e = 0x10001; //65537
+        public static BigInteger p, q, n, x, d = new BigInteger();
+        public KeyPair GenerateKey()
         {
+            do {
+                p = RandomPrimeNumber();
+            } while(p % e == 1);
+            do {
+                q = RandomPrimeNumber();
+            } while(q % e == 1);
+            n = p * q;
+            //totient function
+            x = (p-1)*(q-1);
+            d=ModularInverse(e,x);
+
+            Key publicKey = new Key(n);
+            Key privateKey = new Key(d, n);
+
+            return new KeyPair(publicKey,privateKey);
+        }
+
+        public static BigInteger RandomPrimeNumber()
+        {
+            byte[] randBytes = new byte[64];
+            Random rand = new Random(DateTime.UtcNow.Millisecond);
+            rand.NextBytes(randBytes);
+            randBytes[randBytes.Length - 1] = 0x0; //unsigned
+
+            //infinte loop
+            SetBitInByte(0, ref randBytes[0]);
+            SetBitInByte(7, ref randBytes[randBytes.Length - 2]);
+            SetBitInByte(6, ref randBytes[randBytes.Length - 2]);
+            while (true)
+            {
+                //Performing a Rabin-Miller primality test.
+                bool isPrime = RabinMillerTest(randBytes, 40);
+                if (isPrime)
+                {
+                    break;
+                } else
+                {
+                    BigInteger n = new BigInteger(randBytes);
+                    n += 2;
+                    randBytes = n.ToByteArray();
+                    var upper_limit = new byte[randBytes.Length];
+                    upper_limit[randBytes.Length - 1] = 0x0;
+                    BigInteger upper_limit_bi = new BigInteger(upper_limit);
+                    BigInteger lower_limit = upper_limit_bi - 20;
+                    BigInteger current = new BigInteger(randBytes);
+
+                    if (lower_limit<current && current<upper_limit_bi)
+                    {
+                        return new BigInteger(-1);
+                    }
+                }
+            }
+
+            return new BigInteger(randBytes);
+        }
+
+        public static void SetBitInByte(int bitNumFromRight, ref byte toSet)
+        {
+            byte mask = (byte)(1 << bitNumFromRight);
+            toSet |= mask;
+        }
+        public static bool RabinMillerTest(byte[] bSource, int certainty)
+        {
+            BigInteger source = new BigInteger(bSource);
             //Filter out basic primes.
             if (source == 2 || source == 3)
             {
                 return true;
             }
-            //Below 2, and % 0? Not prime.
+          
             if (source < 2 || source % 2 == 0)
             {
                 return false;
             }
 
-            //Finding even integer below number.
+          
             BigInteger d = source - 1;
             int s = 0;
 
@@ -34,30 +93,30 @@ namespace RSAImplementation
                 s += 1;
             }
 
-            //Getting a random BigInt using bytes.
+           
             Random rng = new Random(Environment.TickCount);
             byte[] bytes = new byte[source.ToByteArray().LongLength];
             BigInteger a;
 
-            //Looping to check random factors.
+           
             for (int i = 0; i < certainty; i++)
             {
                 do
                 {
-                    //Generating new random bytes to check as a factor.
+                   
                     rng.NextBytes(bytes);
                     a = new BigInteger(bytes);
                 }
                 while (a < 2 || a >= source - 2);
 
-                //Checking for x=1 or x=s-1.
+               
                 BigInteger x = BigInteger.ModPow(a, d, source);
                 if (x == 1 || x == source - 1)
                 {
                     continue;
                 }
 
-                //Iterating to check for prime.
+                
                 for (int r = 1; r < s; r++)
                 {
                     x = BigInteger.ModPow(x, 2, source);
@@ -76,23 +135,9 @@ namespace RSAImplementation
                     return false;
                 }
             }
-
-            //All tests have failed to prove composite, so return prime.
             return true;
         }
 
-        //An overload wrapper for the RabinMillerTest which accepts a byte array.
-        public static bool RabinMillerTest(byte[] bytes, int acc_amt)
-        {
-            BigInteger b = new BigInteger(bytes);
-            return RabinMillerTest(b, acc_amt);
-        }
-
-        /// <summary>
-        /// Performs a modular inverse on u and v,
-        /// such that d = gcd(u,v);
-        /// </summary>
-        /// <returns>D, such that D = gcd(u,v).</returns>
         public static BigInteger ModularInverse(BigInteger u, BigInteger v)
         {
             //Declaring new variables on the heap.
@@ -137,28 +182,6 @@ namespace RSAImplementation
             //Return.
             return inverse;
         }
-
-        /// <summary>
-        /// Returns the greatest common denominator of both BigIntegers given.
-        /// </summary>
-        /// <returns>The GCD of A and B.</returns>
-        public static BigInteger GCD(BigInteger a, BigInteger b)
-        {
-            //Looping until the numbers are zero values.
-            while (a != 0 && b != 0)
-            {
-                if (a > b)
-                {
-                    a %= b;
-                }
-                else
-                {
-                    b %= a;
-                }
-            }
-
-            //Returning check.
-            return a == 0 ? b : a;
-        }
     }
+
 }
