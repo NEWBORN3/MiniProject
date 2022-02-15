@@ -52,6 +52,7 @@ namespace Client
             // 
             this.txtIp.Location = new System.Drawing.Point(109, 47);
             this.txtIp.Name = "txtIp";
+            this.txtIp.ReadOnly = true;
             this.txtIp.Size = new System.Drawing.Size(333, 23);
             this.txtIp.TabIndex = 1;
             this.txtIp.Text = "127.0.0.1:9000";

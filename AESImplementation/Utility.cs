@@ -1,6 +1,8 @@
+using System;
+
 namespace AESImplementation
 {
-    public static class ArrayExtensions
+    public static class Utility
     {
         public static T[] Slice<T>(this T[] source, int start, int end)
         {
@@ -18,6 +20,14 @@ namespace AESImplementation
                 res[i] = source[i + start];
             }
             return res;
+        }
+
+        public static byte[] GenerateRandomByte(int byteSize)
+        {
+            Random rnd = new Random();
+            byte[] b = new byte[byteSize]; 
+            rnd.NextBytes(b);
+            return b;
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Numerics;
 using System.IO;
 using RSAImplementation;
+using AESImplementation;
 using SimpleTcp;
 using System;
 using System.Collections.Generic;
@@ -22,9 +23,12 @@ namespace Server
             InitializeComponent();
         }
         SimpleTcpServer server;
+        AESEncrypt aEnc;
+        AESDecrypt aDec;
         KeyPair kp;
         RSAEncrypt re = new RSAEncrypt();
         RSADecrypt rd = new RSADecrypt();
+
         int counter = 0;
 
         BigInteger cPk; 
@@ -51,10 +55,11 @@ namespace Server
             server.Events.ClientConnected += Events_ClientConnected;
             server.Events.ClientDisconnected += Events_ClientDisconnected;
             server.Events.DataReceived += Events_DataReceived;
-
-            //generate key pair
+            aEnc = new AESEncrypt();
+            aDec =  new AESDecrypt();
+            
             KeyGenerate kg = new KeyGenerate();
-            kp = kg.GenerateKey();
+            kp = kg.GenerateKey(1024);
 
         }
 
@@ -64,14 +69,18 @@ namespace Server
             { 
                 if (counter == 0)
                 {
-                    txtInfo.Text += $"{e.IpPort} {ASCIIEncoding.UTF8.GetString(e.Data)} {Environment.NewLine}";
-                    txtInfo.Text += $"{Environment.NewLine}";
+                    txtInfo.Text += $"-----Public Key of Client------ {Environment.NewLine}";
+                    txtInfo.Text += $"{ASCIIEncoding.UTF8.GetString(e.Data)}";
+                    txtInfo.Text += $"-------------------{Environment.NewLine} End of public key{Environment.NewLine}";
                     cPk = new BigInteger(e.Data);
                     clientPK = new Key(cPk); 
                 } else 
                 {
-                    byte[] decText = rd.DecryptBytes(e.Data, kp.privateKey);
-                    txtInfo.Text += $"{e.IpPort}: {ASCIIEncoding.UTF8.GetString(decText)} {Environment.NewLine}";
+                    byte[] aesEKey = e.Data.Slice(0, 128); //127
+                    byte[] aesKey = rd.DecryptBytes(aesEKey, kp.privateKey);
+                    byte[] recievedETxt = e.Data.Slice(128, e.Data.Length);
+                    byte[] recievedTxt = aDec.DecryptByte(recievedETxt, aesEKey);
+                    txtInfo.Text += $"{e.IpPort}: {ASCIIEncoding.UTF8.GetString(recievedTxt)} {Environment.NewLine}";
                 }
                 counter++;
             });
@@ -83,7 +92,6 @@ namespace Server
             { 
                 txtInfo.Text += $"{e.IpPort} Disconnected {Environment.NewLine}";
                 listClientIp.Items.Remove(e.IpPort);
-                txtInfo.Text += $"{cPk}";
             });
         }
 
@@ -107,18 +115,19 @@ namespace Server
             {
                 if (!string.IsNullOrEmpty(txtMessage.Text) && listClientIp.SelectedItem != null)
                 {
-                    
-                    byte[] encryptedTxt = re.EncryptBytes(txtMessage.Text,clientPK);
-            
-                    server.Send(listClientIp.SelectedItem.ToString(), encryptedTxt);
-                    // txtInfo.Text += $"Server: {txtMessage.Text}{Environment.NewLine}";
-                    txtInfo.Text += $"Server: {ASCIIEncoding.UTF8.GetString(encryptedTxt)} {Environment.NewLine}";
-                    txtMessage.Text = string.Empty;
+                    byte[]  symKey = AESImplementation.Utility.GenerateRandomByte(16);
+                    byte[] encryptedKey = re.EncryptBytes(symKey, clientPK);
+                    byte[] encryptedTxt = aEnc.EncryptByte(ASCIIEncoding.UTF8.GetBytes(txtMessage.Text), encryptedKey);
+                    byte[] toSend = encryptedKey.Concat(encryptedTxt).ToArray();
+                    server.Send(listClientIp.SelectedItem.ToString(), toSend);
+                    txtInfo.Text += $"Server: {txtMessage.Text} {Environment.NewLine}";
+                    txtMessage.Text = string.Empty; 
                 }
             }
         }
         private void listClientIp_SelectedIndexChanged(object sender, EventArgs e)
         {
+
 
         }
     }

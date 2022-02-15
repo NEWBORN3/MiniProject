@@ -4,15 +4,14 @@ using System.Runtime.Serialization;
 
 namespace RSAImplementation
 {
-    [DataContract(Name = "Key", Namespace = "RSAImplementation")]
-    [Serializable]
+    
     public class Key
     {
-        [DataMember(Name = "type")]
+  
         public KeyType keyType;
-        [DataMember(Name = "n")]
+    
         public BigInteger n { get; set; }
-        [DataMember(Name = "e")]
+    
         public int e = 0x10001;
 
         public readonly BigInteger d;

@@ -54,6 +54,7 @@ namespace Server
             // 
             this.txtIP.Location = new System.Drawing.Point(109, 47);
             this.txtIP.Name = "txtIP";
+            this.txtIP.ReadOnly = true;
             this.txtIP.Size = new System.Drawing.Size(333, 23);
             this.txtIP.TabIndex = 1;
             this.txtIP.Text = "127.0.0.1:9000";
@@ -114,6 +115,7 @@ namespace Server
             this.listClientIp.Size = new System.Drawing.Size(139, 199);
             this.listClientIp.TabIndex = 3;
             this.listClientIp.SelectedIndexChanged += new System.EventHandler(this.listClientIp_SelectedIndexChanged);
+            
             // 
             // label3
             // 

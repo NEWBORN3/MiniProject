@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RSAImplementation\RSAImplementation.csproj" />
+    <ProjectReference Include="..\AESImplementation\AESImplementation.csproj" />
   </ItemGroup>
 
 </Project>

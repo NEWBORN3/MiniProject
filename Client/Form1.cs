@@ -1,4 +1,5 @@
-﻿using RSAImplementation;
+﻿using AESImplementation;
+using RSAImplementation;
 using SimpleTcp;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,9 @@ namespace Client
         BigInteger cPk; 
 
         Key serverPk;
+        
+        AESEncrypt aEnc;
+        AESDecrypt aDec;
         RSADecrypt rd = new RSADecrypt();
         RSAEncrypt re = new RSAEncrypt();
         
@@ -36,8 +40,6 @@ namespace Client
                 client.Connect();
                 btnSend.Enabled = true;
                 btnConnect.Enabled = false;
-
-                txtInfo.Text += $"{kp.publicKey} {Environment.NewLine}";
             }
             catch(Exception ex)
             {
@@ -56,10 +58,11 @@ namespace Client
             client.Events.DataReceived += Events_DataRecieved;
             client.Events.Disconnected += Events_Disconnected;
             btnSend.Enabled = false;
-
-            //Generate Key pair
+            
+            aEnc = new AESEncrypt();
+            aDec =  new AESDecrypt();
             KeyGenerate kg = new KeyGenerate();
-            kp = kg.GenerateKey();
+            kp = kg.GenerateKey(1024);
         }
 
         private void Events_Disconnected(object sender, ConnectionEventArgs e)
@@ -76,15 +79,18 @@ namespace Client
             {
                 if (counter == 0)
                 {
+                    txtInfo.Text += $"-----Public Key of Server------ {Environment.NewLine}";
                     txtInfo.Text += $"Server: {ASCIIEncoding.UTF8.GetString(e.Data)} {Environment.NewLine}";
-                    txtInfo.Text += $"{Environment.NewLine}";         
+                    txtInfo.Text += $"-------------------{Environment.NewLine} End of public key{Environment.NewLine}";
                     cPk = new BigInteger(e.Data);
                     serverPk = new Key(cPk);
                 } else 
-                {
-                    txtInfo.Text += $"Server: {ASCIIEncoding.UTF8.GetString(e.Data)} {Environment.NewLine}";
-                    byte[] decText = rd.DecryptBytes(e.Data, kp.privateKey);
-                    txtInfo.Text += $"Server: {ASCIIEncoding.UTF8.GetString(decText)} {Environment.NewLine}";
+                {   
+                    byte[] aesEKey = e.Data.Slice(0, 128);
+                    byte[] aesKey = rd.DecryptBytes(aesEKey, kp.privateKey);
+                    byte[] recievedETxt = e.Data.Slice(128, e.Data.Length);
+                    byte[] recievedTxt = aDec.DecryptByte(recievedETxt, aesEKey);
+                    txtInfo.Text += $"Server: {ASCIIEncoding.UTF8.GetString(recievedTxt)} {Environment.NewLine}";
                 }
                 counter++;
             });
@@ -105,12 +111,12 @@ namespace Client
             {
                 if (!string.IsNullOrEmpty(txtMessage.Text))
                 {
-                    byte[] encryptedTxt = re.EncryptBytes(txtMessage.Text,serverPk);
-            
-                    client.Send( encryptedTxt);
-                    client.Send(txtMessage.Text);
-                    // txtInfo.Text += $"Me: {txtMessage.Text} {Environment.NewLine}";
-                    txtInfo.Text += $"Server: {ASCIIEncoding.UTF8.GetString(encryptedTxt)} {Environment.NewLine}";
+                    byte[] symKey = AESImplementation.Utility.GenerateRandomByte(16);
+                    byte[] encryptedKey = re.EncryptBytes(symKey, serverPk);
+                    byte[] encryptedTxt = aEnc.EncryptByte(ASCIIEncoding.UTF8.GetBytes(txtMessage.Text), encryptedKey);
+                    byte[] toSend = encryptedKey.Concat(encryptedTxt).ToArray();
+                    client.Send(toSend);
+                    txtInfo.Text += $"Me: {txtMessage.Text} {Environment.NewLine}";
                     txtMessage.Text = string.Empty;
                 }
             }

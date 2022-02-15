@@ -6,29 +6,39 @@ namespace RSAImplementation
     {
         const int e = 0x10001; //65537
         public static BigInteger p, q, n, x, d = new BigInteger();
-        public KeyPair GenerateKey()
+        public KeyPair GenerateKey(int bitlength)
         {
-            do {
-                p = RandomPrimeNumber();
-            } while(p % e == 1);
-            do {
-                q = RandomPrimeNumber();
-            } while(q % e == 1);
-            n = p * q;
-            //totient function
-            x = (p-1)*(q-1);
-            d=ModularInverse(e,x);
+            do
+            {
+                q = RandomPrimeNumber(bitlength / 2);
+            } while (q % e == 1);
+            do
+            {
+                p = RandomPrimeNumber(bitlength / 2);
+            } while (p % e == 1);
+
+            n = q * p;
+            x = (p - 1) * (q - 1);
+
+          
+            d = ModularInverse(e, x);
 
             Key publicKey = new Key(n);
             Key privateKey = new Key(d, n);
 
-            return new KeyPair(publicKey,privateKey);
+            return new KeyPair(publicKey, privateKey);
         }
 
-        public static BigInteger RandomPrimeNumber()
+        public static BigInteger RandomPrimeNumber(int bitlength)
         {
-            byte[] randBytes = new byte[64];
+             if (bitlength%8 != 0)
+            {
+                throw new Exception("Invalid bit length for key given, cannot generate primes.");
+            }
+
+            byte[] randBytes = new byte[(bitlength / 8)+1];
             Random rand = new Random(DateTime.UtcNow.Millisecond);
+
             rand.NextBytes(randBytes);
             randBytes[randBytes.Length - 1] = 0x0; //unsigned
 
@@ -43,18 +53,17 @@ namespace RSAImplementation
                 if (isPrime)
                 {
                     break;
-                } else
+                }
+                else
                 {
-                    BigInteger n = new BigInteger(randBytes);
-                    n += 2;
-                    randBytes = n.ToByteArray();
+                    IncrementByteArrayLE(ref randBytes, 2);
                     var upper_limit = new byte[randBytes.Length];
                     upper_limit[randBytes.Length - 1] = 0x0;
                     BigInteger upper_limit_bi = new BigInteger(upper_limit);
                     BigInteger lower_limit = upper_limit_bi - 20;
                     BigInteger current = new BigInteger(randBytes);
 
-                    if (lower_limit<current && current<upper_limit_bi)
+                    if (lower_limit < current && current < upper_limit_bi)
                     {
                         return new BigInteger(-1);
                     }
@@ -72,18 +81,18 @@ namespace RSAImplementation
         public static bool RabinMillerTest(byte[] bSource, int certainty)
         {
             BigInteger source = new BigInteger(bSource);
-            //Filter out basic primes.
+
             if (source == 2 || source == 3)
             {
                 return true;
             }
-          
+
             if (source < 2 || source % 2 == 0)
             {
                 return false;
             }
 
-          
+
             BigInteger d = source - 1;
             int s = 0;
 
@@ -93,30 +102,30 @@ namespace RSAImplementation
                 s += 1;
             }
 
-           
+
             Random rng = new Random(Environment.TickCount);
             byte[] bytes = new byte[source.ToByteArray().LongLength];
             BigInteger a;
 
-           
+
             for (int i = 0; i < certainty; i++)
             {
                 do
                 {
-                   
+
                     rng.NextBytes(bytes);
                     a = new BigInteger(bytes);
                 }
                 while (a < 2 || a >= source - 2);
 
-               
+
                 BigInteger x = BigInteger.ModPow(a, d, source);
                 if (x == 1 || x == source - 1)
                 {
                     continue;
                 }
 
-                
+
                 for (int r = 1; r < s; r++)
                 {
                     x = BigInteger.ModPow(x, 2, source);
@@ -140,34 +149,34 @@ namespace RSAImplementation
 
         public static BigInteger ModularInverse(BigInteger u, BigInteger v)
         {
-            //Declaring new variables on the heap.
+
             BigInteger inverse, u1, u3, v1, v3, t1, t3, q = new BigInteger();
-            //Staying on the stack, quite small, so no need for extra memory time.
+
             BigInteger iteration;
 
-            //Stating initial variables.
+
             u1 = 1;
             u3 = u;
             v1 = 0;
             v3 = v;
 
-            //Beginning iteration.
+
             iteration = 1;
             while (v3 != 0)
             {
-                //Divide and sub q, t3 and t1.
+
                 q = u3 / v3;
                 t3 = u3 % v3;
                 t1 = u1 + q * v1;
 
-                //Swap variables for next pass.
+
                 u1 = v1; v1 = t1; u3 = v3; v3 = t3;
                 iteration = -iteration;
             }
 
             if (u3 != 1)
             {
-                //No inverse, return 0.
+
                 return 0;
             }
             else if (iteration < 0)
@@ -179,8 +188,15 @@ namespace RSAImplementation
                 inverse = u1;
             }
 
-            //Return.
+
             return inverse;
+        }
+
+        public static void IncrementByteArrayLE(ref byte[] randomBytes, int amt)
+        {
+            BigInteger n = new BigInteger(randomBytes);
+            n += amt;
+            randomBytes = n.ToByteArray();
         }
     }
 
